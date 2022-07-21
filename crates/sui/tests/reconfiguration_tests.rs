@@ -4,7 +4,6 @@ use multiaddr::Multiaddr;
 use std::time::Duration;
 use sui_config::ValidatorInfo;
 use sui_core::authority_client::AuthorityAPI;
-use sui_core::checkpoints::{CheckpointLocals, CHECKPOINT_COUNT_PER_EPOCH};
 use sui_core::safe_client::SafeClient;
 use sui_node::SuiNode;
 use sui_types::base_types::{ObjectID, ObjectRef};
@@ -26,31 +25,16 @@ async fn reconfig_end_to_end_tests() {
     let mut configs = test_authority_configs();
     for c in configs.validator_configs.iter_mut() {
         c.enable_gossip = true;
+        c.enable_reconfig = true;
     }
     let validator_info = configs.validator_set();
     let mut gas_objects = test_gas_objects();
-    // generate_gas_objects_for_testing() would generate objects with very large balance,
-    // enough for staking.
     let validator_stake = generate_gas_object_with_balance(100000000000000);
     let mut states = Vec::new();
     let mut nodes = Vec::new();
     for validator in configs.validator_configs() {
         let node = SuiNode::start(validator).await.unwrap();
         let state = node.state();
-
-        state
-            .checkpoints
-            .as_ref()
-            .unwrap()
-            .lock()
-            .set_locals_for_testing(CheckpointLocals {
-                next_checkpoint: CHECKPOINT_COUNT_PER_EPOCH,
-                proposal_next_transaction: None,
-                next_transaction_sequence: 0,
-                no_more_fragments: true,
-                current_proposal: None,
-            })
-            .unwrap();
 
         for gas in gas_objects.clone() {
             state.insert_genesis_object(gas).await;
@@ -95,25 +79,10 @@ async fn reconfig_end_to_end_tests() {
     let results: Vec<_> = nodes
         .iter()
         .map(|node| async {
-            let active = node.active().unwrap();
-            active.start_epoch_change().await.unwrap();
-            tokio::time::sleep(Duration::from_millis(100)).await;
-
-            node.state()
-                .checkpoints
-                .as_ref()
-                .unwrap()
-                .lock()
-                .set_locals_for_testing(CheckpointLocals {
-                    next_checkpoint: CHECKPOINT_COUNT_PER_EPOCH + 1,
-                    proposal_next_transaction: None,
-                    next_transaction_sequence: 0,
-                    no_more_fragments: true,
-                    current_proposal: None,
-                })
-                .unwrap();
-
-            active.finish_epoch_change().await.unwrap();
+            // Just wait for the checkpoint driver to trigger and finish epoch changes.
+            while node.state().epoch() == 0 {
+                tokio::time::sleep(Duration::from_secs(60)).await;
+            }
         })
         .collect();
 
