@@ -50,7 +50,7 @@ use crate::{
 use sui_json::{resolve_move_function_args, SuiJsonCallArg, SuiJsonValue};
 use sui_json_rpc_types::{
     GetObjectDataResponse, GetRawObjectDataResponse, MergeCoinResponse, MoveCallParams,
-    PublishResponse, RPCTransactionRequestParams, SplitCoinResponse, SuiMoveObject, SuiObject,
+    PublishResponse, RPCTransactionRequestParams, SplitCoinResponse, SuiData, SuiObject,
     SuiObjectInfo, SuiTransactionEffects, SuiTypeTag, TransactionEffectsResponse,
     TransactionResponse, TransferObjectParams,
 };
@@ -445,7 +445,7 @@ where
         Ok(object)
     }
 
-    async fn get_sui_object<T: SuiMoveObject>(
+    async fn get_sui_object<T: SuiData>(
         &self,
         object_id: &ObjectID,
     ) -> Result<SuiObject<T>, anyhow::Error> {
@@ -453,7 +453,7 @@ where
         self.to_sui_object(object).await
     }
 
-    async fn to_sui_object<T: SuiMoveObject>(
+    async fn to_sui_object<T: SuiData>(
         &self,
         object: Object,
     ) -> Result<SuiObject<T>, anyhow::Error> {
