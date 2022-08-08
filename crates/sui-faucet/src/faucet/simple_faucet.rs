@@ -190,6 +190,7 @@ impl SimpleFaucet {
 
         let data = context
             .gateway
+            .transaction_builder()
             .transfer_sui(signer, coin_id, budget, recipient, Some(amount))
             .await?;
         let signature = context.keystore.sign(&signer, &data.to_bytes())?;

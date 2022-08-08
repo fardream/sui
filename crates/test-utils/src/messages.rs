@@ -56,14 +56,14 @@ pub async fn get_account_and_gas_coins(
 pub async fn get_account_and_objects(
     context: &WalletContext,
 ) -> Vec<(SuiAddress, Vec<SuiObjectInfo>)> {
-    let owned_gas_objects = futures::future::join_all(
-        context
-            .keystore
-            .addresses()
-            .iter()
-            .map(|account| context.gateway.get_objects_owned_by_address(*account)),
-    )
-    .await;
+    let owned_gas_objects =
+        futures::future::join_all(context.keystore.addresses().iter().map(|account| {
+            context
+                .gateway
+                .read_api()
+                .get_objects_owned_by_address(*account)
+        }))
+        .await;
     context
         .keystore
         .addresses()
