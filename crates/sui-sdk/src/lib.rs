@@ -158,21 +158,38 @@ impl TransactionBuilder {
         &self,
         signer: SuiAddress,
         package_object_id: ObjectID,
-        module: String,
-        function: String,
+        module: &str,
+        function: &str,
         type_arguments: Vec<SuiTypeTag>,
         arguments: Vec<SuiJsonValue>,
         gas: Option<ObjectID>,
         gas_budget: u64,
     ) -> anyhow::Result<TransactionData> {
+        // let package = self.read_api.get_object_ref(package_object_id).await?;
+        // let gas = if let Some(gas) = gas {
+        //     self.read_api.get_object_ref(gas).await?
+        // } else {
+        //     self.select_gas(signer, gas_budget).await?
+        // };
+        // Ok(TransactionData::new_move_call(
+        //     signer,
+        //     package,
+        //     Identifier::from_str(module)?,
+        //     Identifier::from_str(function)?,
+        //     type_arguments,
+        //     gas,
+        //     arguments,
+        //     gas_budget,
+        // ))
+
         Ok(match &*self.api {
             SuiClientApi::Rpc(c, _) => {
                 let transaction_bytes = c
                     .move_call(
                         signer,
                         package_object_id,
-                        module,
-                        function,
+                        module.to_string(),
+                        function.to_string(),
                         type_arguments,
                         arguments,
                         gas,
@@ -185,8 +202,8 @@ impl TransactionBuilder {
                 c.move_call(
                     signer,
                     package_object_id,
-                    module,
-                    function,
+                    module.to_string(),
+                    function.to_string(),
                     type_arguments,
                     arguments,
                     gas,
@@ -204,20 +221,17 @@ impl TransactionBuilder {
         gas: Option<ObjectID>,
         gas_budget: u64,
     ) -> anyhow::Result<TransactionData> {
-        Ok(match &*self.api {
-            SuiClientApi::Rpc(c, _) => {
-                let compiled_modules = compiled_modules
-                    .iter()
-                    .map(|b| Base64::from_bytes(b))
-                    .collect();
-                let transaction_bytes =
-                    c.publish(sender, compiled_modules, gas, gas_budget).await?;
-                TransactionData::from_signable_bytes(&transaction_bytes.tx_bytes.to_vec()?)?
-            }
-            SuiClientApi::Embedded(c) => {
-                c.publish(sender, compiled_modules, gas, gas_budget).await?
-            }
-        })
+        let gas = if let Some(gas) = gas {
+            self.read_api.get_object_ref(gas).await?
+        } else {
+            self.select_gas(sender, gas_budget).await?
+        };
+        Ok(TransactionData::new_module(
+            sender,
+            gas,
+            compiled_modules,
+            gas_budget,
+        ))
     }
 
     pub async fn split_coin(
