@@ -1,8 +1,6 @@
 // Copyright (c) 2022, Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::btree_map::Entry;
-use std::collections::BTreeMap;
 use std::fmt::Write;
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
@@ -15,7 +13,6 @@ use jsonrpsee::http_client::{HttpClient, HttpClientBuilder};
 use jsonrpsee::ws_client::{WsClient, WsClientBuilder};
 use serde::Deserialize;
 use serde::Serialize;
-use tokio::sync::RwLock;
 
 // re-export essential sui crates
 pub use sui_config::gateway;
@@ -53,66 +50,6 @@ pub struct SuiClient {
     event_api: EventApi,
 }
 
-struct ClientState {
-    api: Arc<SuiClientApi>,
-    objects: BTreeMap<ObjectID, GetRawObjectDataResponse>,
-    account_owned_objects: BTreeMap<SuiAddress, Vec<SuiObjectInfo>>,
-    object_owned_objects: BTreeMap<ObjectID, Vec<SuiObjectInfo>>,
-}
-
-impl ClientState {
-    async fn get_objects_owned_by_address(
-        &mut self,
-        address: SuiAddress,
-    ) -> anyhow::Result<Vec<SuiObjectInfo>> {
-        let result = match self.account_owned_objects.entry(address) {
-            Entry::Vacant(entry) => {
-                let objects = match &*self.api {
-                    SuiClientApi::Rpc(c, _) => c.get_objects_owned_by_address(address).await?,
-                    SuiClientApi::Embedded(c) => c.get_objects_owned_by_address(address).await?,
-                };
-                entry.insert(objects).to_vec()
-            }
-            Entry::Occupied(entry) => entry.get().to_vec(),
-        };
-        Ok(result)
-    }
-
-    async fn get_objects_owned_by_object(
-        &mut self,
-        object_id: ObjectID,
-    ) -> anyhow::Result<Vec<SuiObjectInfo>> {
-        let result = match self.object_owned_objects.entry(object_id) {
-            Entry::Vacant(entry) => {
-                let objects = match &*self.api {
-                    SuiClientApi::Rpc(c, _) => c.get_objects_owned_by_object(object_id).await?,
-                    SuiClientApi::Embedded(c) => c.get_objects_owned_by_object(object_id).await?,
-                };
-                entry.insert(objects).to_vec()
-            }
-            Entry::Occupied(entry) => entry.get().to_vec(),
-        };
-        Ok(result)
-    }
-
-    async fn get_object(
-        &mut self,
-        object_id: ObjectID,
-    ) -> anyhow::Result<GetRawObjectDataResponse> {
-        let result = match self.objects.entry(object_id) {
-            Entry::Vacant(entry) => {
-                let object = match &*self.api {
-                    SuiClientApi::Rpc(c, _) => c.get_raw_object(object_id).await?,
-                    SuiClientApi::Embedded(c) => c.get_raw_object(object_id).await?,
-                };
-                entry.insert(object).clone()
-            }
-            Entry::Occupied(entry) => entry.get().clone(),
-        };
-        Ok(result)
-    }
-}
-
 #[allow(clippy::large_enum_variant)]
 enum SuiClientApi {
     Rpc(HttpClient, Option<WsClient>),
@@ -140,16 +77,7 @@ impl SuiClient {
     }
     fn new(api: SuiClientApi) -> Self {
         let api = Arc::new(api);
-        let state = Arc::new(RwLock::new(ClientState {
-            api: api.clone(),
-            objects: Default::default(),
-            account_owned_objects: Default::default(),
-            object_owned_objects: Default::default(),
-        }));
-        let read_api = Arc::new(ReadApi {
-            api: api.clone(),
-            state,
-        });
+        let read_api = Arc::new(ReadApi { api: api.clone() });
         let full_node_api = FullNodeApi(api.clone());
         let event_api = EventApi(api.clone());
         let transaction_builder = TransactionBuilder {
@@ -360,7 +288,6 @@ impl TransactionBuilder {
 
 pub struct ReadApi {
     api: Arc<SuiClientApi>,
-    state: Arc<RwLock<ClientState>>,
 }
 
 impl ReadApi {
@@ -368,22 +295,20 @@ impl ReadApi {
         &self,
         address: SuiAddress,
     ) -> anyhow::Result<Vec<SuiObjectInfo>> {
-        self.state
-            .write()
-            .await
-            .get_objects_owned_by_address(address)
-            .await
+        Ok(match &*self.api {
+            SuiClientApi::Rpc(c, _) => c.get_objects_owned_by_address(address).await?,
+            SuiClientApi::Embedded(c) => c.get_objects_owned_by_address(address).await?,
+        })
     }
 
     pub async fn get_objects_owned_by_object(
         &self,
         object_id: ObjectID,
     ) -> anyhow::Result<Vec<SuiObjectInfo>> {
-        self.state
-            .write()
-            .await
-            .get_objects_owned_by_object(object_id)
-            .await
+        Ok(match &*self.api {
+            SuiClientApi::Rpc(c, _) => c.get_objects_owned_by_object(object_id).await?,
+            SuiClientApi::Embedded(c) => c.get_objects_owned_by_object(object_id).await?,
+        })
     }
 
     pub async fn get_object(&self, object_id: ObjectID) -> anyhow::Result<GetObjectDataResponse> {
@@ -406,7 +331,10 @@ impl ReadApi {
         &self,
         object_id: ObjectID,
     ) -> anyhow::Result<GetRawObjectDataResponse> {
-        self.state.write().await.get_object(object_id).await
+        Ok(match &*self.api {
+            SuiClientApi::Rpc(c, _) => c.get_raw_object(object_id).await?,
+            SuiClientApi::Embedded(c) => c.get_raw_object(object_id).await?,
+        })
     }
 
     pub async fn get_total_transaction_number(&self) -> anyhow::Result<u64> {
