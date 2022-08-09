@@ -24,6 +24,7 @@ use sui_json_rpc::api::RpcBcsApiClient;
 use sui_json_rpc::api::RpcFullNodeReadApiClient;
 use sui_json_rpc::api::RpcGatewayApiClient;
 use sui_json_rpc::api::RpcReadApiClient;
+use sui_json_rpc::api::WalletSyncApiClient;
 pub use sui_json_rpc_types as rpc_types;
 use sui_json_rpc_types::{
     GatewayTxSeqNumber, GetObjectDataResponse, GetRawObjectDataResponse, SuiEventEnvelope,
@@ -41,6 +42,7 @@ pub mod crypto;
 pub mod transaction_builder;
 
 pub struct SuiClient {
+    api: Arc<SuiClientApi>,
     transaction_builder: TransactionBuilder,
     read_api: Arc<ReadApi>,
     full_node_api: FullNodeApi,
@@ -81,8 +83,9 @@ impl SuiClient {
         let transaction_builder = TransactionBuilder {
             read_api: read_api.clone(),
         };
-        let quorum_driver = QuorumDriver(api);
+        let quorum_driver = QuorumDriver(api.clone());
         SuiClient {
+            api,
             transaction_builder,
             read_api,
             full_node_api,
@@ -300,7 +303,10 @@ impl SuiClient {
         &self.quorum_driver
     }
     pub async fn sync_client_state(&self, address: SuiAddress) -> anyhow::Result<()> {
-        // TODO sync local account state
+        match &*self.api {
+            SuiClientApi::Rpc(c, _) => c.sync_account_state(address).await?,
+            SuiClientApi::Embedded(c) => c.sync_account_state(address).await?,
+        }
         Ok(())
     }
 }
