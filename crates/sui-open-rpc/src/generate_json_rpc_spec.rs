@@ -30,9 +30,8 @@ use sui_json_rpc::read_api::{FullNodeApi, ReadApi};
 use sui_json_rpc::sui_rpc_doc;
 use sui_json_rpc::SuiRpcModule;
 use sui_json_rpc_types::{
-    GetObjectDataResponse, GetObjectDataResponse, MoveFunctionArgType, ObjectValueKind, SuiData,
-    SuiObjectInfo, SuiObjectInfo, TransactionBytes, TransactionBytes, TransactionEffectsResponse,
-    TransactionEffectsResponse, TransactionResponse, TransactionResponse,
+    GetObjectDataResponse, MoveFunctionArgType, ObjectValueKind, SuiData, SuiObjectInfo,
+    TransactionBytes, TransactionEffectsResponse, TransactionResponse,
 };
 use sui_types::base_types::{ObjectID, SuiAddress};
 use sui_types::crypto::SuiSignature;
