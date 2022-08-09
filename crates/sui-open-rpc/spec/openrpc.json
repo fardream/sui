@@ -625,7 +625,8 @@
                   "bcs_bytes": "y6vpecji5/JbHn0awiIgOv2vubQQJwAAAAAAAA==",
                   "dataType": "moveObject",
                   "has_public_transfer": true,
-                  "type": "0x2::coin::Coin<0x2::sui::SUI>"
+                  "type": "0x2::coin::Coin<0x2::sui::SUI>",
+                  "version": 1
                 },
                 "owner": {
                   "AddressOwner": "0x4db1ad9cd2e822480f3008903f1bd4ba2f27a12a"
@@ -1846,7 +1847,8 @@
               "bcs_bytes",
               "dataType",
               "has_public_transfer",
-              "type"
+              "type",
+              "version"
             ],
             "properties": {
               "bcs_bytes": {
@@ -1863,6 +1865,9 @@
               },
               "type": {
                 "type": "string"
+              },
+              "version": {
+                "$ref": "#/components/schemas/SequenceNumber"
               }
             }
           },

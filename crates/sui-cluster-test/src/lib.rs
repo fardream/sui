@@ -76,6 +76,7 @@ impl TestContext {
     async fn sign_and_execute(&self, txn_data: TransactionData, desc: &str) -> TransactionResponse {
         let signature = self.get_context().sign(&txn_data, desc);
         self.get_gateway()
+            .quorum_driver()
             .execute_transaction(Transaction::new(txn_data, signature))
             .await
             .unwrap_or_else(|e| panic!("Failed to execute transaction for {}. {}", desc, e))

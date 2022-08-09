@@ -293,6 +293,7 @@ impl SuiClientCommands {
                 let signature = context.keystore.sign(&sender, &data.to_bytes())?;
                 let response = context
                     .gateway
+                    .quorum_driver()
                     .execute_transaction(Transaction::new(data, signature))
                     .await?
                     .to_publish_response()?;
@@ -338,6 +339,7 @@ impl SuiClientCommands {
                 let signature = context.keystore.sign(&from, &data.to_bytes())?;
                 let response = context
                     .gateway
+                    .quorum_driver()
                     .execute_transaction(Transaction::new(data, signature))
                     .await?
                     .to_effect_response()?;
@@ -367,6 +369,7 @@ impl SuiClientCommands {
                 let signature = context.keystore.sign(&from, &data.to_bytes())?;
                 let response = context
                     .gateway
+                    .quorum_driver()
                     .execute_transaction(Transaction::new(data, signature))
                     .await?
                     .to_effect_response()?;
@@ -435,6 +438,7 @@ impl SuiClientCommands {
                 let signature = context.keystore.sign(&signer, &data.to_bytes())?;
                 let response = context
                     .gateway
+                    .quorum_driver()
                     .execute_transaction(Transaction::new(data, signature))
                     .await?
                     .to_split_coin_response()?;
@@ -455,6 +459,7 @@ impl SuiClientCommands {
                 let signature = context.keystore.sign(&signer, &data.to_bytes())?;
                 let response = context
                     .gateway
+                    .quorum_driver()
                     .execute_transaction(Transaction::new(data, signature))
                     .await?
                     .to_merge_coin_response()?;
@@ -769,6 +774,7 @@ pub async fn call_move(
     let transaction = Transaction::new(data, signature);
     let response = context
         .gateway
+        .quorum_driver()
         .execute_transaction(transaction)
         .await?
         .to_effect_response()?;
