@@ -974,7 +974,7 @@ impl From<MoveStruct> for SuiMoveStruct {
 #[derive(Debug, Deserialize, Serialize, JsonSchema, Clone, Eq, PartialEq)]
 #[serde(rename = "MovePackage")]
 pub struct SuiMovePackage {
-    disassembled: BTreeMap<String, Value>,
+    pub disassembled: BTreeMap<String, Value>,
 }
 
 impl TryFrom<MoveModulePublish> for SuiMovePackage {
